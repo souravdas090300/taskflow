@@ -9,12 +9,14 @@ namespace TaskFlow.API.Services;
 public class GoogleTokenValidator
 {
     private readonly IConfiguration _configuration;
+    private readonly ILogger<GoogleTokenValidator> _logger;
     private readonly HttpDocumentRetriever _retriever = new();
     private ConfigurationManager<OpenIdConnectConfiguration>? _configManager;
 
-    public GoogleTokenValidator(IConfiguration configuration)
+    public GoogleTokenValidator(IConfiguration configuration, ILogger<GoogleTokenValidator> logger)
     {
         _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task<ClaimsPrincipal?> ValidateAsync(string idToken)
@@ -44,8 +46,9 @@ public class GoogleTokenValidator
         {
             return handler.ValidateToken(idToken, parameters, out _);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Google ID token validation failed");
             return null;
         }
     }
@@ -61,8 +64,9 @@ public class GoogleTokenValidator
         {
             return await _configManager.GetConfigurationAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Failed to fetch Google OIDC configuration");
             return null;
         }
     }
