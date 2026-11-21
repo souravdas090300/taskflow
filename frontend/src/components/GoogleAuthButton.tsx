@@ -60,8 +60,12 @@ export const GoogleAuthButton = ({ onSuccess, onError, className }: GoogleAuthBu
         try {
           await loginWithGoogle(response.credential);
           onSuccessRef.current?.();
-        } catch {
-          onErrorRef.current?.('Google sign-in failed');
+        } catch (error) {
+          console.error('Google sign-in failed', error);
+          const message =
+            (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+            'Google sign-in failed';
+          onErrorRef.current?.(message);
         }
       },
     });

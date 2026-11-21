@@ -51,13 +51,19 @@ function clearAuthAndRedirect() {
   }
 }
 
+// Auth endpoints return 401 for bad credentials, not expired sessions —
+// they must not trigger the refresh-and-redirect flow.
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/google', '/auth/refresh', '/auth/logout', '/auth/forgot-password', '/auth/reset-password', '/auth/verify-email', '/auth/change-password'];
+
 // Response interceptor: on 401, try one token refresh then retry the request once
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status !== 401 || originalRequest?._retried) {
-      if (error.response?.status === 401) clearAuthAndRedirect();
+    const url = originalRequest?.url ?? '';
+    const isAuthEndpoint = AUTH_ENDPOINTS.some((path) => url.includes(path));
+    if (error.response?.status !== 401 || originalRequest?._retried || isAuthEndpoint) {
+      if (error.response?.status === 401 && !isAuthEndpoint) clearAuthAndRedirect();
       return Promise.reject(error);
     }
 

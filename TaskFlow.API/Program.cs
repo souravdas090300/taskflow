@@ -520,7 +520,9 @@ app.MapPost("/api/auth/login", async (LoginDto dto, AuthService authService) =>
 app.MapPost("/api/auth/google", async (GoogleLoginDto dto, AuthService authService) =>
 {
     var result = await authService.LoginWithGoogleAsync(dto.Credential);
-    return result == null ? Results.Unauthorized() : Results.Ok(result);
+    return result == null
+        ? Results.Json(new { message = "Google sign-in failed. Please try again." }, statusCode: StatusCodes.Status401Unauthorized)
+        : Results.Ok(result);
 })
     .WithName("GoogleLogin")
     .AllowAnonymous();
