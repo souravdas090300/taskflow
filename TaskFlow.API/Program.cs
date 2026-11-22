@@ -106,7 +106,9 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    builder.Services.AddScoped<IEmailService, ResendEmailService>();
+    // Resolve through the typed HttpClient registration above so the
+    // ResendEmailService gets the HttpClient with BaseAddress set.
+    builder.Services.AddScoped<IEmailService>(sp => sp.GetRequiredService<ResendEmailService>());
 }
 
 // Register payment gateway
