@@ -76,6 +76,9 @@ public class AuthService
         };
     }
 
+    private const int MaxFailedLoginAttempts = 5;
+    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
     public async Task<AuthResponseDto?> LoginAsync(LoginDto dto)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
@@ -84,9 +87,21 @@ public class AuthService
             return null;
         }
 
+        // Account is temporarily locked after repeated failures
+        if (user.LockoutUntil is { } lockoutUntil && lockoutUntil > DateTime.UtcNow)
+        {
+            return null;
+        }
+
         // Verify password
         if (user.PasswordHash is null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
         {
+            user.FailedLoginAttempts += 1;
+            if (user.FailedLoginAttempts >= MaxFailedLoginAttempts)
+            {
+                user.LockoutUntil = DateTime.UtcNow.Add(LockoutDuration);
+            }
+            await _context.SaveChangesAsync();
             return null;
         }
 
@@ -95,6 +110,10 @@ public class AuthService
         {
             return null;
         }
+
+        // Successful login clears the failure counter
+        user.FailedLoginAttempts = 0;
+        user.LockoutUntil = null;
 
         // Generate tokens (JWT + refresh)
         var (token, expiration, refreshToken, refreshExpiry) = await IssueTokensAsync(user);

@@ -140,6 +140,16 @@ builder.Services.AddRateLimiter(options =>
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0
         }));
+
+    // Per-IP limit on credential endpoints to slow brute-force and spam.
+    options.AddPolicy("auth", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        }));
 });
 
 // Configure Authentication
@@ -503,7 +513,8 @@ app.MapPost("/api/auth/register", async (RegisterDto dto, AuthService authServic
     return Results.Ok(result);
 })
     .WithName("Register")
-    .AllowAnonymous();
+    .AllowAnonymous()
+    .RequireRateLimiting("auth");
 
 // Login
 app.MapPost("/api/auth/login", async (LoginDto dto, AuthService authService) =>
@@ -516,7 +527,8 @@ app.MapPost("/api/auth/login", async (LoginDto dto, AuthService authService) =>
     return Results.Ok(result);
 })
     .WithName("JwtLogin")
-    .AllowAnonymous();
+    .AllowAnonymous()
+    .RequireRateLimiting("auth");
 
 // Google sign-in/sign-up using a Google Identity Services ID token
 app.MapPost("/api/auth/google", async (GoogleLoginDto dto, AuthService authService) =>
@@ -527,7 +539,8 @@ app.MapPost("/api/auth/google", async (GoogleLoginDto dto, AuthService authServi
         : Results.Ok(result);
 })
     .WithName("GoogleLogin")
-    .AllowAnonymous();
+    .AllowAnonymous()
+    .RequireRateLimiting("auth");
 
 // Get current user
 app.MapGet("/api/auth/me", async (HttpContext context, AuthService authService) =>
@@ -603,7 +616,8 @@ app.MapPost("/api/auth/forgot-password", async (ForgotPasswordDto dto, AuthServi
     return Results.Ok(new { message = "If that email is registered, a reset link has been sent." });
 })
     .WithName("ForgotPassword")
-    .AllowAnonymous();
+    .AllowAnonymous()
+    .RequireRateLimiting("auth");
 
 // Reset password using the emailed token
 app.MapPost("/api/auth/reset-password", async (ResetPasswordDto dto, AuthService authService) =>
@@ -614,7 +628,8 @@ app.MapPost("/api/auth/reset-password", async (ResetPasswordDto dto, AuthService
         : Results.BadRequest(new { error = "Invalid or expired reset link" });
 })
     .WithName("ResetPassword")
-    .AllowAnonymous();
+    .AllowAnonymous()
+    .RequireRateLimiting("auth");
 
 // Verify email using the emailed token
 app.MapGet("/api/auth/verify-email", async (string token, AuthService authService) =>
