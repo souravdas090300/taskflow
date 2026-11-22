@@ -157,11 +157,22 @@ Complete documentation for the TaskFlow e-commerce solution.
 
 ## Quick Reference
 
-### Environment Variables
+### Key Environment Variables
 
 ```env
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret
+# Backend (double-underscore = .NET config sections)
+JWT__Key=...
+App__PublicUrl=https://taskflow-das.duckdns.org
+Authentication__Google__ClientId=...
+Authentication__Google__ClientSecret=...
+Stripe__SecretKey=sk_test_...
+Stripe__WebhookSecret=whsec_...
+Resend__ApiKey=re_...
+Resend__FromEmail=onboarding@resend.dev
+
+# Frontend (baked at build time)
+VITE_GOOGLE_CLIENT_ID=...   # must match Authentication__Google__ClientId
+VITE_API_URL=               # empty = same-origin /api via nginx
 ```
 
 ### Database Connection String
@@ -172,9 +183,8 @@ Host=db;Port=5432;Database=taskflow;Username=taskflow;Password=${DB_PASSWORD}
 
 ### Production URLs
 
-- Frontend: https://taskflow-das.duckdns.org
-- API: https://api.taskflow-das.duckdns.org
-- Nginx Admin: http://77.25.144.193:81
+- Storefront + API (same origin): https://taskflow-das.duckdns.org (`/api/*` proxied to the API container)
+- Nginx Proxy Manager admin: http://92.5.144.125:81
 
 ---
 

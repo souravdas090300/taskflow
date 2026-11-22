@@ -70,17 +70,19 @@ cp .env.example .env
 
 **Note:** For production, use a strong, random password (minimum 16 characters, mixed case, numbers, symbols).
 
-### Google OAuth Configuration
+### Google Sign-In (Google Identity Services)
 
 | Variable | Description | Example | Required |
 |----------|-------------|---------|----------|
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID | `123456789.apps.googleusercontent.com` | Yes (for auth) |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | `GOCSPX-abc123xyz789` | Yes (for auth) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | `123456789.apps.googleusercontent.com` | Yes (for Google auth) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | `GOCSPX-abc123xyz789` | Yes (for Google auth) |
+| `VITE_GOOGLE_CLIENT_ID` | Frontend GIS client ID — **must match `GOOGLE_CLIENT_ID`** | same as above | Yes (frontend build) |
 
-**How to get these:**
+**How to configure:**
 1. Go to https://console.cloud.google.com/apis/credentials
-2. Create OAuth 2.0 credentials
-3. Set redirect URI: `http://localhost:5000/signin-google` (dev) or `https://yourdomain.com/signin-google` (prod)
+2. Create OAuth 2.0 credentials → **Web application**
+3. Add **Authorized JavaScript origins** (no path): `http://localhost:5173`, `http://localhost`, `https://taskflow-das.duckdns.org`
+4. Redirect URIs are **not** needed — the app uses the GIS ID-token flow (`POST /api/auth/google`), not OAuth redirects. See [GOOGLE_AUTH_SETUP.md](GOOGLE_AUTH_SETUP.md).
 
 ### DuckDNS Configuration
 
@@ -238,9 +240,10 @@ docker-compose config
 ### Issue: Google OAuth Fails
 
 **Solution:** Verify:
-1. Client ID and Secret are set in `.env`
-2. Redirect URI matches in Google Console
-3. Correct HTTP vs HTTPS for your environment
+1. Client ID and Secret are set (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and `VITE_GOOGLE_CLIENT_ID` for the frontend)
+2. The page origin is in **Authorized JavaScript origins** in Google Console (exact match, no path)
+3. The app is published or the Google account is a listed test user
+4. For `401` from `/api/auth/google`, check API logs for the JWT validation error
 
 ## Example .env Files
 
@@ -254,8 +257,12 @@ DB_PORT=5432
 DB_NAME=taskflow
 DB_USER=taskflow
 DB_PASSWORD=TaskFlow@2026
+JWT__Key=dev-only-jwt-signing-key-change-me-32chars-min
+App__PublicUrl=http://localhost:5173
 GOOGLE_CLIENT_ID=123456789.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-abc123
+VITE_GOOGLE_CLIENT_ID=123456789.apps.googleusercontent.com
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 DUCKDNS_SUBDOMAIN=
 DUCKDNS_TOKEN=
 ```
@@ -270,11 +277,19 @@ DB_PORT=5432
 DB_NAME=taskflow
 DB_USER=taskflow
 DB_PASSWORD=xK9#mP2$vL8&nQ5!zR3%wE7@sD1
-GOOGLE_CLIENT_ID=987654321.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-xyz789
+JWT__Key=your-strong-jwt-signing-key-minimum-32-chars
+App__PublicUrl=https://taskflow-das.duckdns.org
+Authentication__Google__ClientId=987654321.apps.googleusercontent.com
+Authentication__Google__ClientSecret=GOCSPX-xyz789
+Stripe__SecretKey=sk_test_...
+Stripe__WebhookSecret=whsec_...
+Resend__ApiKey=re_...
+Resend__FromEmail=onboarding@resend.dev
 DUCKDNS_SUBDOMAIN=taskflow-das
 DUCKDNS_TOKEN=abc123def456ghi789
 ```
+
+> Production **fails fast at startup** if `JWT:Key`, `Stripe:SecretKey`, `Stripe:WebhookSecret`, `Resend:ApiKey`, `Resend:FromEmail`, or `App:PublicUrl` are missing. The deploy workflow writes these from GitHub secrets — see [CI_CD_SETUP.md](CI_CD_SETUP.md).
 
 ## Related Documentation
 
