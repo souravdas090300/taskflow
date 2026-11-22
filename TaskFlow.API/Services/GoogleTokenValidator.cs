@@ -23,7 +23,12 @@ public class GoogleTokenValidator
     {
         var clientId = _configuration["Authentication:Google:ClientId"];
         if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(idToken))
+        {
+            _logger.LogWarning(
+                "Google token validation skipped: clientIdConfigured={ClientIdConfigured}, idTokenLength={IdTokenLength}",
+                !string.IsNullOrWhiteSpace(clientId), idToken?.Length ?? 0);
             return null;
+        }
 
         var config = await GetConfigurationAsync();
         if (config is null)

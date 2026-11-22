@@ -57,6 +57,7 @@ export const GoogleAuthButton = ({ onSuccess, onError, className }: GoogleAuthBu
     googleId.initialize({
       client_id: clientId,
       callback: async (response) => {
+        console.log('Google credential response', Object.keys(response), 'credential length:', response.credential?.length ?? 0);
         try {
           await loginWithGoogle(response.credential);
           onSuccessRef.current?.();
