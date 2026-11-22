@@ -108,6 +108,7 @@ export const Register = () => {
               <input
                 id="register-password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 pr-10 border rounded-lg"
@@ -130,6 +131,7 @@ export const Register = () => {
               <input
                 id="register-confirm-password"
                 type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-4 py-2 pr-10 border rounded-lg"
