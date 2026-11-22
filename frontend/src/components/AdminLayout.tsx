@@ -23,7 +23,7 @@ export const AdminLayout = () => {
             <Link to="/admin" className="flex items-center gap-2">
               <img src="/brand/logo-tight.png" alt="TaskFlow" className="h-5 w-auto object-contain opacity-80" />
               <span className="bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent text-xl font-bold">
-                TaskFlow
+                Mercato
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest bg-purple-600/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded">
                 Admin
