@@ -116,8 +116,9 @@ http://<YOUR_ORACLE_PUBLIC_IP>:81
 
 ### 2.3. API routing (no second proxy host needed)
 
-The frontend container's nginx already proxies `/api/*`, `/health`, `/login`,
-`/logout`, `/auth/user` and `/signin-google` to the `taskflow-api` container.
+The frontend container's nginx already proxies `/api/*`, `/health`,
+`/weatherforecast` and the legacy `/signin-google` callback to the
+`taskflow-api` container.
 So **one proxy host is enough** — API calls go to
 `https://taskflow-das.duckdns.org/api/...` on the same domain.
 
@@ -138,28 +139,30 @@ So **one proxy host is enough** — API calls go to
 
 ---
 
-## Step 3: Update Google OAuth Configuration
+## Step 3: Configure Google Sign-In
 
-### 3.1. Add Production Redirect URIs to Google Console
+The app uses **Google Identity Services** (GIS button + ID token), not the OAuth redirect flow.
+
+### 3.1. Authorized JavaScript origins
 
 Go to Google Cloud Console > APIs & Services > Credentials > Edit your OAuth client ID
 
-Add these **Authorized redirect URIs**:
+Add this **Authorized JavaScript origin** (no path):
 ```
-https://taskflow-das.duckdns.org/signin-google
-```
-
-### 3.2. Update .env File on VPS
-
-SSH into your VPS and edit the `.env` file:
-```bash
-nano .env
+https://taskflow-das.duckdns.org
 ```
 
-Add your actual Google credentials:
+Redirect URIs are **not** required for the active flow — the frontend POSTs the Google ID token to `/api/auth/google`. (The `/signin-google` nginx proxy entry only serves the unused legacy `AddGoogle` handler.)
+
+See [GOOGLE_AUTH_SETUP.md](GOOGLE_AUTH_SETUP.md) for the full setup.
+
+### 3.2. Environment variables
+
+In normal operation the deploy workflow writes `.env` on the VPS from GitHub secrets (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `VITE_GOOGLE_CLIENT_ID` build arg, etc.) — see [CI_CD_SETUP.md](CI_CD_SETUP.md). If editing `.env` manually, use the double-underscore production keys:
+
 ```env
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-google-client-secret
+Authentication__Google__ClientId=your-google-client-id.apps.googleusercontent.com
+Authentication__Google__ClientSecret=your-google-client-secret
 ```
 
 Restart the API container:
@@ -244,9 +247,10 @@ Should redirect to Google OAuth.
 
 ### Add to Google OAuth Console
 
-**Authorized redirect URIs:**
+**Authorized JavaScript origins:**
 ```
-https://taskflow-das.duckdns.org/signin-google
+https://taskflow-das.duckdns.org
+http://localhost:5173        (local dev only)
 ```
 
 ---

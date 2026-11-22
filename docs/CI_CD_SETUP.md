@@ -93,14 +93,25 @@ Add the following secrets:
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
-| `VPS_HOST_IP` | Your VPS public IP address | `77.25.144.193` |
-| `VPS_USERNAME` | VPS username | `ubuntu` or `root` |
+| `VPS_HOST_IP` | Your VPS public IP address | `92.5.144.125` |
+| `VPS_USERNAME` | VPS username | `ubuntu` |
 | `VPS_SSH_PRIVATE_KEY` | Private SSH key content | Full content of `~/.ssh/taskflow_deploy` |
-| `DB_PASSWORD` | PostgreSQL database password | Strong password (16+ chars) |
+| `DB_PASSWORD` | PostgreSQL database password | Strong password (avoid `$` — see note) |
+| `JWT_KEY` | JWT signing key (min 32 chars) | Long random string |
+| `APP_PUBLIC_URL` | Public site URL | `https://taskflow-das.duckdns.org` |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | `123456789.apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | `GOCSPX-abc123` |
+| `STRIPE_SECRET_KEY` | Stripe secret key (test mode) | `sk_test_...` |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | `whsec_...` |
+| `RESEND_API_KEY` | Resend API key | `re_...` |
+| `RESEND__FROMEMAIL` | Resend sender address | `onboarding@resend.dev` or `noreply@yourdomain.com` |
 | `DUCKDNS_SUBDOMAIN` | DuckDNS subdomain | `taskflow-das` |
 | `DUCKDNS_TOKEN` | DuckDNS authentication token | Your token from duckdns.org |
+
+> **Notes:**
+> - `GOOGLE_CLIENT_ID` is reused as the frontend build arg `VITE_GOOGLE_CLIENT_ID`, so the GIS button and API audience check always match.
+> - `RESEND__FROMEMAIL` is the actual secret name (double underscore). Store the **literal email address** — never `${{ secrets.RESEND_FROM_EMAIL }}`; an unevaluated expression once landed verbatim in `.env` and broke all email sends.
+> - Secret values are written to `.env` with single quotes and `$` escaped to `$$` for Compose interpolation. Avoid `$` in `DB_PASSWORD`/`JWT_KEY` to keep values predictable.
 
 ### How to Add SSH Private Key
 
@@ -135,19 +146,19 @@ Before CI/CD works, you need to do an initial manual setup on the VPS:
 
 ### 5.1 Create .env File on VPS
 
+The deploy workflow generates `.env` on the VPS from GitHub secrets automatically — a manual `.env` is only needed for the very first bootstrap before CI/CD runs. If you create one, use the production keys (`JWT__Key`, `Stripe__SecretKey`, `Resend__ApiKey`, `Resend__FromEmail`, `App__PublicUrl`, `Authentication__Google__ClientId/ClientSecret`, `ConnectionStrings__DefaultConnection`):
+
 ```bash
 # SSH into VPS
 ssh your-vps-user@your-vps-ip
 cd ~/taskflow
 
-# Create .env file
-cat > .env << EOF
+cat > .env << 'EOF'
 DB_PASSWORD=your-strong-password-here
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-DUCKDNS_SUBDOMAIN=taskflow-das
-DUCKDNS_TOKEN=your-duckdns-token
+JWT__Key=your-jwt-signing-key
+App__PublicUrl=https://taskflow-das.duckdns.org
 EOF
+# add the remaining keys from .env.prod.example as needed
 ```
 
 ### 5.2 Initial Deploy
@@ -199,13 +210,15 @@ Open your browser: `http://your-vps-ip:81`
   - ✅ HTTP/2 Support
   - ✅ HSTS Enabled
 
-### 6.3 Update Google OAuth Redirect URIs
+### 6.3 Configure Google Sign-In
 
-Add these to your Google Cloud Console:
+The app uses **Google Identity Services** (ID-token button), not the OAuth redirect flow. In Google Cloud Console → Credentials → your OAuth client, configure **Authorized JavaScript origins** (no path):
+
 ```
-https://taskflow-das.duckdns.org/signin-google
-https://api.taskflow-das.duckdns.org/signin-google
+https://taskflow-das.duckdns.org
 ```
+
+Also add `http://localhost:5173` for local development. Redirect URIs are not needed for this flow. See [GOOGLE_AUTH_SETUP.md](GOOGLE_AUTH_SETUP.md).
 
 ## Step 7: Trigger CI/CD
 

@@ -100,7 +100,13 @@ Day-to-day deploys are automated — see below. Full walkthrough: [Production De
 
 `.github/workflows/deploy.yml` builds and pushes the API, frontend, and migrator images to GHCR on pushes to `main`, then SSHes into the VPS, resets the repo, writes `.env` from GitHub secrets, pulls images, and runs `docker compose up -d` with `ASPNETCORE_ENVIRONMENT=Production`.
 
-Required GitHub secrets: `DB_PASSWORD`, `JWT_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (or `RESEND__FROMEMAIL`), `APP_PUBLIC_URL` (`https://taskflow-das.duckdns.org`), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `VITE_STRIPE_PUBLISHABLE_KEY` (optional — checkout redirects to a server-created Stripe session), `DUCKDNS_SUBDOMAIN`, `DUCKDNS_TOKEN`, `VPS_HOST_IP`, `VPS_USERNAME`, `VPS_SSH_PRIVATE_KEY`.
+Required GitHub secrets: `DB_PASSWORD`, `JWT_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `RESEND__FROMEMAIL`, `APP_PUBLIC_URL` (`https://taskflow-das.duckdns.org`), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `VITE_STRIPE_PUBLISHABLE_KEY` (optional — checkout redirects to a server-created Stripe session), `DUCKDNS_SUBDOMAIN`, `DUCKDNS_TOKEN`, `VPS_HOST_IP`, `VPS_USERNAME`, `VPS_SSH_PRIVATE_KEY`.
+
+Notes:
+
+- `RESEND__FROMEMAIL` must be a **verified sender** in Resend. While Resend is in test mode use `onboarding@resend.dev` — it only delivers to the Resend account owner's email. Verify a domain (SPF + DKIM) to send to anyone.
+- Secrets containing `$` are escaped automatically when `.env` is generated; do not put `${{ }}` expressions inside secret values.
+- The VPS `docker login` uses `GITHUB_TOKEN`, which expires after each run — fine for deploys, but manual `docker compose pull` on the VPS may need a fresh `docker login`.
 
 In production the API refuses to start without `Jwt:Key`, `Stripe:SecretKey`, `Stripe:WebhookSecret`, Resend settings, and an absolute `App:PublicUrl` — a crash-looping `taskflow-api` after deploy almost always means one of these secrets is empty.
 
@@ -143,7 +149,7 @@ The script registers through `/api/auth/register` if needed, then sets `Users.Ro
 - **Backend**: ASP.NET Core 10 minimal APIs, layered as API / Application / Domain / Infrastructure.
 - **Frontend**: React 19 + TypeScript + Vite, built to static files and served by nginx inside `Dockerfile.frontend`.
 - **Database**: PostgreSQL 17 + EF Core; `Dockerfile.migrator` runs the migration bundle once per deploy and is ARM64-aware.
-- **Auth**: JWT access/refresh tokens, email verification, password reset, and Google sign-in via Google Identity Services (ID token validated server-side; new Google users are created as `Customer`).
+- **Auth**: JWT access/refresh tokens (hashed, rotating), email verification, password reset, login lockout, and Google sign-in via Google Identity Services (ID token validated server-side; new Google users are created as `Customer`).
 - **Payments**: Stripe Checkout + webhooks with idempotent handling, `PaymentReview` stock-conflict flow, and an admin payment-issues API.
 - **Email**: Resend in production, mock email service in development.
 - **Edge**: Nginx Proxy Manager terminates HTTPS and sends traffic to the frontend container; the frontend nginx proxies `/api`, `/health`, `/weatherforecast`, and `/signin-google` to the API.
@@ -158,7 +164,8 @@ The script registers through `/api/auth/register` if needed, then sets `Users.Ro
 - Stripe webhook idempotency, atomic stock decrement, payment issue tracking
 - Admin dashboard for stats, orders, products, categories, and payment issues
 - Responsive storefront (mobile header/menu), public legal pages `/privacy-policy` and `/terms-of-service` (static HTML for verification bots)
-- Rate limiting, global exception handling, forwarded headers
+- Rate limiting (checkout + auth endpoints), login lockout after repeated failures, global exception handling, forwarded headers
+- Security headers + CSP in the frontend nginx (`nginx.conf`)
 - Docker Compose dev/prod stacks, ARM64 migration bundle, backup/restore scripts
 
 ## Documentation
