@@ -57,7 +57,6 @@ export const GoogleAuthButton = ({ onSuccess, onError, className }: GoogleAuthBu
     googleId.initialize({
       client_id: clientId,
       callback: async (response) => {
-        console.log('Google credential response', Object.keys(response), 'credential length:', response.credential?.length ?? 0);
         try {
           await loginWithGoogle(response.credential);
           onSuccessRef.current?.();
@@ -70,7 +69,8 @@ export const GoogleAuthButton = ({ onSuccess, onError, className }: GoogleAuthBu
         }
       },
     });
-    googleId.renderButton(buttonRef.current, { theme: 'outline', size: 'large', width: '100%' });
+    const width = buttonRef.current?.offsetWidth || 400;
+    googleId.renderButton(buttonRef.current, { theme: 'outline', size: 'large', width });
   }, [scriptReady, clientId, loginWithGoogle]);
 
   if (!clientId) return null;
