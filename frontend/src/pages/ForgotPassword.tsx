@@ -35,6 +35,7 @@ export const ForgotPassword = () => {
               <input
                 id="forgot-email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg"
