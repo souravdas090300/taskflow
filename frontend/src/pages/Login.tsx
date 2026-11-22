@@ -31,6 +31,7 @@ export const Login = () => {
             <input
               id="login-email"
               type="email"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border rounded-lg"
@@ -52,6 +53,12 @@ export const Login = () => {
           <button type="submit" className="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700">
             Login
           </button>
+          <Link
+            to="/register"
+            className="block w-full text-center border border-purple-600 text-purple-600 py-2 rounded-lg font-semibold hover:bg-purple-50"
+          >
+            Register
+          </Link>
         </form>
 
         <div className="my-6 flex items-center gap-3">
@@ -69,9 +76,6 @@ export const Login = () => {
 
         <p className="mt-4 text-center text-sm">
           <Link to="/forgot-password" className="text-purple-600">Forgot password?</Link>
-        </p>
-        <p className="mt-2 text-center text-sm">
-          Don't have an account? <Link to="/register" className="text-purple-600">Register</Link>
         </p>
       </div>
     </div>
