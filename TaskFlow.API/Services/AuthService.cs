@@ -115,16 +115,27 @@ public class AuthService
         if (principal is null)
             return null;
 
-        var googleId = principal.FindFirst("sub")?.Value;
-        var email = principal.FindFirst("email")?.Value;
-        if (string.IsNullOrWhiteSpace(googleId) || string.IsNullOrWhiteSpace(email))
-            return null;
+        // JwtSecurityTokenHandler maps inbound JWT claims to WS-Federation
+        // types ("sub" -> NameIdentifier, "email" -> EmailAddress, ...), so
+        // look up both the raw JWT name and the mapped claim type.
+        static string? FindClaim(ClaimsPrincipal principal, string jwtName, string mappedType) =>
+            principal.FindFirst(jwtName)?.Value ?? principal.FindFirst(mappedType)?.Value;
 
-        var emailVerified = bool.TryParse(principal.FindFirst("email_verified")?.Value, out var verified) && verified;
-        var firstName = principal.FindFirst("given_name")?.Value ?? string.Empty;
-        var lastName = principal.FindFirst("family_name")?.Value ?? string.Empty;
-        var name = principal.FindFirst("name")?.Value;
-        var picture = principal.FindFirst("picture")?.Value;
+        var googleId = FindClaim(principal, "sub", ClaimTypes.NameIdentifier);
+        var email = FindClaim(principal, "email", ClaimTypes.Email);
+        if (string.IsNullOrWhiteSpace(googleId) || string.IsNullOrWhiteSpace(email))
+        {
+            _logger.LogWarning(
+                "Google token validated but required claims missing. Claims: {Claims}",
+                string.Join(", ", principal.Claims.Select(c => c.Type)));
+            return null;
+        }
+
+        var emailVerified = bool.TryParse(FindClaim(principal, "email_verified", "email_verified"), out var verified) && verified;
+        var firstName = FindClaim(principal, "given_name", ClaimTypes.GivenName) ?? string.Empty;
+        var lastName = FindClaim(principal, "family_name", ClaimTypes.Surname) ?? string.Empty;
+        var name = FindClaim(principal, "name", ClaimTypes.Name);
+        var picture = FindClaim(principal, "picture", "picture");
 
         var nameParts = (name ?? $"{firstName} {lastName}").Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var resolvedFirstName = firstName.Length > 0 ? firstName : nameParts.FirstOrDefault() ?? "Customer";
